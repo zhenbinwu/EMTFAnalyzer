@@ -11,7 +11,6 @@
 import uproot
 import numpy as np
 import awkward as ak
-import matplotlib.pyplot as plt
 from hist import Hist
 from pprint import pprint
 
@@ -28,24 +27,34 @@ class EMTFHits():
             if k.startswith("hit_"):
                 setattr(self, k, event[k])
 
+        ## Setting the hybrid stub stations
+        isME11 = ((self.hit_emtf_chamber >= 0) & (self.hit_emtf_chamber <= 2)) | \
+                ((self.hit_emtf_chamber >= 9) &   (self.hit_emtf_chamber <= 11)) 
+        isME0 = ((self.hit_emtf_chamber >= 108) & (self.hit_emtf_chamber <= 114))
+        isGE11 = ((self.hit_emtf_chamber >= 54) & (self.hit_emtf_chamber <= 56)) | \
+                ((self.hit_emtf_chamber >= 63) &   (self.hit_emtf_chamber <= 11)) 
+        istation1 = isME0 | isME11 | isGE11
+        self.hb_station = self.hit_station+1
+        self.hb_station = ak.where(istation1, 1, self.hb_station)
+
     def __bookSecCnt(self):
         self.h.update({
-            "seccnt" : Hist.new.Reg(20, 0, 20, name="NO. of hits / Sector").Int64(),
-            "stationcnt" : Hist.new.Reg(20, 0, 20, name="NO. of hits / Station").Int64(),
+            "seccnt" : Hist.new.Reg(20, 0, 20, name="NO. of hits / Sector").Double(),
+            "stationcnt" : Hist.new.Reg(20, 0, 20, name="NO. of hits / Station").Double(),
         })
         for i in range(1, len(sysnum)):
-            self.h["seccnt_type%d" % i]=Hist.new.Reg(20, 0, 20, name="NO. of %s hits / Sector" % sysnum[i]).Int64()
+            self.h["seccnt_type%d" % i]=Hist.new.Reg(20, 0, 20, name="NO. of %s hits / Sector" % sysnum[i]).Double()
 
         for i in range(1, 6):
-            self.h["stationcnt%d" % i]=Hist.new.Reg(20, 0, 20, name="NO. of hits / Station %d" % i).Int64()
+            self.h["stationcnt%d" % i]=Hist.new.Reg(20, 0, 20, name="NO. of hits / Station %d" % i).Double()
             for j in range(0, len(sysnum)):
                 self.h["seccnt_type%d_sta%d" %( j , i) ]= Hist.new.Reg(20, 0, 20, 
-                                                                  name="NO. of %s hits / Station %i" % (sysnum[j], i)).Int64()
+                                                                  name="NO. of %s hits / Station %i" % (sysnum[j], i)).Double()
             
     def __bookExtraHits(self):
         self.h.update({
-            "extra_cnt" : Hist.new.Reg(10, 0, 10, name="NO. of extra hits/ Sector").Int64(),
-            "extra_station" : Hist.new.Reg(20, 0, 20, name="NO. of hits / Station").Int64(),
+            "extra_cnt" : Hist.new.Reg(10, 0, 10, name="NO. of extra hits/ Sector").Double(),
+            "extra_station" : Hist.new.Reg(20, 0, 20, name="NO. of hits / Station").Double(),
         })
 
 
@@ -69,7 +78,7 @@ class EMTFHits():
         cnt = ak.run_lengths(sorted.sta)
         self.h["stationcnt"].fill(ak.flatten(cnt))
 
-        x = ak.zip({ "sec" : self.hit_endcap * self.hit_sector, "station" : self.hit_station, "sys" : self.hit_subsystem  })
+        x = ak.zip({ "sec" : self.hit_endcap * self.hit_sector, "station" : self.hb_station, "sys" : self.hit_subsystem  })
         sorted = x[ak.argsort(x.sec)]
         for i in range(1, 6):
             stats = x.sec[ x.station == i]
@@ -82,14 +91,16 @@ class EMTFHits():
 
     def FindExtraHits(self):
         sel = self.hit_emtf_segment > 1
-        print(self.hit_subsystem[sel])
+        # print(self.hit_subsystem[sel])
 
-    def endrun(self):
-        fig = plt.figure(figsize=(10, 8))
-        for k in self.h.keys():
-            self.h[k].plot()
-            # plt.title("df")
-            fig.savefig("%s.png" % k)
-            fig.clf()
+    def endrun(self, outfile):
+        for k in self.h:
+            outfile[k] = self.h[k]
+        # fig = plt.figure(figsize=(10, 8))
+        # for k in self.h.keys():
+            # self.h[k].plot()
+            # # plt.title("df")
+            # fig.savefig("%s.png" % k)
+            # fig.clf()
         # self.h["seccnt"].plot()
         # fig.ylabel("test")
