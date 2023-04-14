@@ -17,6 +17,7 @@ import pprint
 import subprocess
 from hist import Hist
 from EMTFHits import EMTFHits
+from Hybrid import HybridStub
 
 import mplhep as hep
 hep.style.use("CMS")
@@ -51,16 +52,16 @@ def eosls(sample):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description='Running over EMTF Ntuple')
-    parser.add_argument("-s", "--sample", dest="sample", default='DYToLL',
+    parser.add_argument("-s", "--sample", dest="sample", default='test',
                         help="sample")
     args = parser.parse_args()
 
-    # filelist = ["./test.root"]
-    filelist = eosls(args.sample)
-    # filelist = ["./test.root", "./test_131.root"]
+    if args.sample == "test":
+        filelist = ["./sample_131.root"]
+    else:
+        filelist = eosls(args.sample)
     filename = [i+":emtfToolsNtupleMaker/tree" for i in filelist]
     events = uproot.iterate(
-        # filename(s)
         filename,
         # step_size is still important
         step_size="2 GB",
@@ -73,6 +74,9 @@ if __name__ == "__main__":
     outfile = uproot.recreate("%s.root" % args.sample )
 
     hit = EMTFHits()
+    hbstub = HybridStub()
     for e in events:
         hit.run(e)
+        hbstub.run(e)
     hit.endrun(outfile)
+    hbstub.endrun(outfile)

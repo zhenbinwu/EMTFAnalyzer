@@ -13,6 +13,7 @@ import numpy as np
 import awkward as ak
 from hist import Hist
 from pprint import pprint
+from EMTFLUT import *
 
 sysnum = ['DT', 'CSC', 'RPC', 'GEM', 'ME0']
 
@@ -29,10 +30,10 @@ class EMTFHits():
 
         ## Setting the hybrid stub stations
         isME11 = ((self.hit_emtf_chamber >= 0) & (self.hit_emtf_chamber <= 2)) | \
-                ((self.hit_emtf_chamber >= 9) &   (self.hit_emtf_chamber <= 11)) 
+                ((self.hit_emtf_chamber >= 9) & (self.hit_emtf_chamber <= 11)) 
         isME0 = ((self.hit_emtf_chamber >= 108) & (self.hit_emtf_chamber <= 114))
         isGE11 = ((self.hit_emtf_chamber >= 54) & (self.hit_emtf_chamber <= 56)) | \
-                ((self.hit_emtf_chamber >= 63) &   (self.hit_emtf_chamber <= 11)) 
+                ((self.hit_emtf_chamber >= 63) & (self.hit_emtf_chamber <= 11)) 
         istation1 = isME0 | isME11 | isGE11
         self.hb_station = self.hit_station+1
         self.hb_station = ak.where(istation1, 1, self.hb_station)
@@ -50,6 +51,9 @@ class EMTFHits():
             for j in range(0, len(sysnum)):
                 self.h["seccnt_type%d_sta%d" %( j , i) ]= Hist.new.Reg(20, 0, 20, 
                                                                   name="NO. of %s hits / Station %i" % (sysnum[j], i)).Double()
+        # for i in EMTFSiteMap.keys():
+            # self.h["phidist_%s" % EMTFSiteMap[i]] = Hist.new.Reg(60, -30, 30,
+                                                                 # name="phi vs offline phi").Double()
             
     def __bookExtraHits(self):
         self.h.update({
@@ -57,11 +61,11 @@ class EMTFHits():
             "extra_station" : Hist.new.Reg(20, 0, 20, name="NO. of hits / Station").Double(),
         })
 
-
     def run(self, event):
         self.__GetEvent__(event)
         self.plotSecCnt()
         self.FindExtraHits()
+        # self.StudyResolution()
 
     def plotSecCnt(self):
         ### Plot per sector
@@ -89,18 +93,21 @@ class EMTFHits():
                 cnt =ak.flatten(ak.run_lengths(syss))
                 self.h["seccnt_type%d_sta%d" %( j , i) ].fill(cnt)
 
+    def StudyResolution(self):
+        secedge = (15 + self.hit_endcap * 60)
+        secedge = ak.where(secedge > 180, secedge-360, secedge)
+        # print(self.hit_glob_phi[0], secedge[0],  (self.hit_glob_phi - secedge)[0] )
+        phidiff = self.hit_emtf_phi * phiLSB - self.hit_glob_phi
+        print(self.hit_emtf_phi[0], self.hit_glob_phi[0],
+              (self.hit_endcap*self.hit_sector)[0], (self.hit_emtf_phi * phiLSB)[0] )
+        for i in EMTFSiteMap.keys():
+            self.h["phidist_%s" % EMTFSiteMap[i]].fill(ak.flatten(phidiff[self.hit_emtf_site == i]))
+
+
     def FindExtraHits(self):
         sel = self.hit_emtf_segment > 1
         # print(self.hit_subsystem[sel])
 
     def endrun(self, outfile):
         for k in self.h:
-            outfile[k] = self.h[k]
-        # fig = plt.figure(figsize=(10, 8))
-        # for k in self.h.keys():
-            # self.h[k].plot()
-            # # plt.title("df")
-            # fig.savefig("%s.png" % k)
-            # fig.clf()
-        # self.h["seccnt"].plot()
-        # fig.ylabel("test")
+            outfile["EMTFHits/%s" % k] = self.h[k]
