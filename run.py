@@ -76,6 +76,7 @@ if __name__ == "__main__":
     hit = EMTFHits()
     hbstub = HybridStub()
     for e in events:
+        print("Processing %d events" % len(e))
         hit.run(e)
         hbstub.run(e)
     hit.endrun(outfile)
