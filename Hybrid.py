@@ -12,6 +12,7 @@ import uproot
 import numpy as np
 import awkward as ak
 from hist import Hist
+from Common import *
 
 class hbstub():
     def __init__(self, stub=None):
@@ -53,10 +54,9 @@ class hbstub():
         return len(self.stubs)
 
 
-class HybridStub():
-    def __init__(self):
-        # store the histogram
-        self.h = {}
+class HybridStub(Module):
+    def __init__(self, name="Hybrids"):
+        super().__init__(name)
         # store the hits of this station
         self.stubs = None
         # Cut value
@@ -110,7 +110,6 @@ class HybridStub():
                 groups[z] = jset
         out = set(map(tuple, groups.values()))
         return out
-
 
     def RunHb(self):
         ## Global selection
@@ -178,6 +177,5 @@ class HybridStub():
         self.RunHb()
         self.plotHBcnts()
 
-    def endrun(self, outfile):
-        for k in self.h:
-            outfile["Hybrids/%s" % k] = self.h[k]
+    def endrun(self, outfile, nTotal=0):
+        super().endrun(outfile, nTotal)

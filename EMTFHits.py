@@ -13,14 +13,57 @@ import numpy as np
 import awkward as ak
 from hist import Hist
 from pprint import pprint
-from EMTFLUT import *
+from Common import *
 
-sysnum = ['DT', 'CSC', 'RPC', 'GEM', 'ME0']
+""" Variables in EMTFNtuple
+hit_bend
+hit_bx
+hit_chamber
+hit_cscfr
+hit_cscid
+hit_emtf_bend
+hit_emtf_chamber
+hit_emtf_host
+hit_emtf_phi
+hit_emtf_qual1
+hit_emtf_qual2
+hit_emtf_segment
+hit_emtf_site
+hit_emtf_theta1
+hit_emtf_theta2
+hit_emtf_time
+hit_emtf_timezones
+hit_emtf_zones
+hit_endcap
+hit_glob_perp
+hit_glob_phi
+hit_glob_theta
+hit_glob_time
+hit_glob_z
+hit_id
+hit_layer
+hit_neighbor
+hit_pattern
+hit_quality
+hit_ring
+hit_sector
+hit_sim_tp1
+hit_sim_tp2
+hit_station
+hit_strip
+hit_strip_hi
+hit_strip_lo
+hit_subbx
+hit_subsector
+hit_subsystem
+hit_valid
+hit_wire1
+hit_wire2
+""" 
 
-class EMTFHits():
-    def __init__(self):
-        # self.prod = prod
-        self.h = {}
+class EMTFHits(Module):
+    def __init__(self, name="EMTFHits"):
+        super().__init__(name)
         self.__bookSecCnt()
 
     def __GetEvent__(self, event):
@@ -108,6 +151,5 @@ class EMTFHits():
         sel = self.hit_emtf_segment > 1
         # print(self.hit_subsystem[sel])
 
-    def endrun(self, outfile):
-        for k in self.h:
-            outfile["EMTFHits/%s" % k] = self.h[k]
+    def endrun(self, outfile, nTotal=0):
+        super().endrun(outfile, nTotal)

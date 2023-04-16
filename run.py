@@ -18,6 +18,8 @@ import subprocess
 from hist import Hist
 from EMTFHits import EMTFHits
 from Hybrid import HybridStub
+from TrackerMuons import TrackerMuons
+from L1Tracks import L1Tracks
 
 import mplhep as hep
 hep.style.use("CMS")
@@ -57,7 +59,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.sample == "test":
-        filelist = ["./sample_131.root"]
+        filelist = ["./sample_TT2L.root"]
     else:
         filelist = eosls(args.sample)
     filename = [i+":emtfToolsNtupleMaker/tree" for i in filelist]
@@ -73,11 +75,26 @@ if __name__ == "__main__":
     ### Store the output file
     outfile = uproot.recreate("%s.root" % args.sample )
 
-    hit = EMTFHits()
-    hbstub = HybridStub()
+    mod_hit = EMTFHits()
+    mod_hbstub = HybridStub()
+    mod_tkmuons = TrackerMuons()
+    mod_l1trks = L1Tracks()
+    modules = [
+        mod_hit,
+        mod_hbstub,
+        mod_tkmuons,
+        mod_l1trks,
+    ]
+
+    ### Running over samples
+    nTotal = 0
     for e in events:
-        print("Processing %d events" % len(e))
-        hit.run(e)
-        hbstub.run(e)
-    hit.endrun(outfile)
-    hbstub.endrun(outfile)
+        nEvent = len(e)
+        print("Processing %d events" % nEvent)
+        nTotal += nEvent
+        [m.run(e) for m in modules]
+
+    ### End of run
+    if "MB" not in args.sample :
+        nTotal = 0
+    [m.endrun(outfile, nTotal) for m in modules]
