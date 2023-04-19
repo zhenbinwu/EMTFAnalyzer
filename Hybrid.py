@@ -60,7 +60,7 @@ class HybridStub(Module):
         # store the hits of this station
         self.stubs = None
         # Cut value
-        self.dPhicut = 50
+        self.dPhicut = 30
         self.dThetacut = 10
         self.__bookSecCnt()
 
@@ -169,7 +169,7 @@ class HybridStub(Module):
         station = abs(sortsecsta) % 10 * np.sign(sortsecsta)
         # print(sortsecsta[1], np.sign(sortsecsta)[1], station[1])
         # print(ak.run_lengths(sortsecsta[abs(station)==1][1]))
-        for i in range(1, 5):
+        for i in range(1, 6):
             self.h["hb_sta%dcnt" % i].fill(ak.flatten(ak.run_lengths(sortsecsta[abs(station)==i])))
 
     def run(self, event):
