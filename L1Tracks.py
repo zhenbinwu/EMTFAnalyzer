@@ -44,6 +44,7 @@ class L1Tracks(Module):
         super().__init__(name)
         self.__bookRate()
         self.progLUTs()
+        self.etaphidiv = 1<<(13-8)
 
     def __GetEvent__(self, event):
         for k in dir(event):
@@ -88,7 +89,6 @@ class L1Tracks(Module):
         abseta = abs(self.l1t_trk_etaI)/8
         cnts = ak.num(abseta)
         flateta = ak.values_astype(ak.flatten(abseta), np.int32)
-        etaphidiv = 1<<(13-8)
 
         self.coord1 = [0] * 5
         self.coord2 = [0] * 5
@@ -103,8 +103,8 @@ class L1Tracks(Module):
                 luts[k] = ak.unflatten(self.LUTs[station][k][flateta], cnts)
 
             curv2 = ak.values_astype(self.l1t_trk_rinvI * self.l1t_trk_rinvI /2, np.int64)
-            self.coord1[station] = (self.l1t_trk_phiI - luts["prop_coord1"] * self.l1t_trk_rinvI / 1024)/ etaphidiv;
-            self.coord2[station] = (self.l1t_trk_phiI - luts["prop_coord2"] * self.l1t_trk_rinvI / 1024) /etaphidiv;
+            self.coord1[station] = (self.l1t_trk_phiI - luts["prop_coord1"] * self.l1t_trk_rinvI / 1024) / self.etaphidiv;
+            self.coord2[station] = (self.l1t_trk_phiI - luts["prop_coord2"] * self.l1t_trk_rinvI / 1024) /self.etaphidiv;
             self.sigma_coord1[station] = (luts["res1_coord1"]  * curv2 ) >> 23 + luts["res0_coord1"] 
             self.sigma_coord2[station] = (luts["res1_coord2"]  * curv2 ) >> 23 + luts["res0_coord2"] 
             self.sigma_eta1[station] = (luts["res1_eta"]  * curv2 ) >> 23 + luts["res0_eta1"] 
@@ -119,24 +119,48 @@ class L1Tracks(Module):
             "layer": self.gmt_stub_tflayer,
         })
 
-        self.props = ak.zip(
-            {
-
+        self.props = ak.zip( {
                 "coord1"                     : self.coord1,
                 "coord2"                     : self.coord2,
                 "sigma_coord1"               : self.sigma_coord1,
                 "sigma_coord2"               : self.sigma_coord2,
                 "sigma_eta1"                 : self.sigma_eta1,
                 "sigma_eta2"                 : self.sigma_eta2,
-            }
-        )
+            })
+
         station = 0
-        cros = ak.cartesian({"p":self.coord1[station], 
-                             "s":self.stubs["phi1"][self.stubs["layer"] == station]})
+        self.matching(station)
 
-        # (cros.p - cros.s)[0].show()
+    def deltaphi(self, phi1, phi2):
+        diff = phi1 - phi2
+        return diff
 
+    def deltaeta(self, eta1, eta2):
+        diff = eta1 - eta2
+        return diff
 
+    def matching(self, station):
+        argcros = ak.argcartesian([self.gmt_stub_eta1, self.l1t_trk_pt], axis=1)
+        stub_idx, trk_idx = ak.unzip(argcros)
+        sel = self.gmt_stub_tflayer[stub_idx] == station
+        selstub_idx = stub_idx[sel]
+        seltrk_idx = trk_idx[sel]
+
+        ## Check phi1
+        dphi1 = self.deltaphi(self.coord1[station][seltrk_idx], self.gmt_stub_phi1[selstub_idx])
+        dphi2 = self.deltaphi(self.coord2[station][seltrk_idx], self.gmt_stub_phi2[selstub_idx])
+        deta1 = self.deltaeta(self.l1t_trk_etaI[seltrk_idx], self.gmt_stub_eta1[selstub_idx])
+        deta2 = self.deltaeta(self.l1t_trk_etaI[seltrk_idx], self.gmt_stub_eta2[selstub_idx])
+        mphi1 = dphi1 <= self.sigma_coord1[station][seltrk_idx]
+        mphi2 = dphi2 <= self.sigma_coord2[station][seltrk_idx]
+        meta1 = deta1 <= self.sigma_eta1[station][seltrk_idx]
+        meta2 = deta2 <= self.sigma_eta2[station][seltrk_idx]
+        match1 = mphi1 & meta1
+        match2 = mphi2 & meta2
+        match3 = mphi1 & (meta1 | meta2)
+        match = match1 | match2 | match3
+        mstub_idx = selstub_idx[match]
+        mtrk_idx = seltrk_idx[match]
 
     def __fillRate(self):
         self.h["trk_rate"].fill(ak.flatten(self.l1t_trk_pt))

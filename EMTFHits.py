@@ -12,6 +12,7 @@ import uproot
 import numpy as np
 import awkward as ak
 from hist import Hist
+import hist
 from pprint import pprint
 from Common import *
 
@@ -80,6 +81,10 @@ class EMTFHits(Module):
         istation1 = isME0 | isME11 | isGE11
         self.hb_station = self.hit_station+1
         self.hb_station = ak.where(istation1, 1, self.hb_station)
+        tflayerLUT = ak.from_iter(TFLayer.values())
+        cnts= ak.num(self.hit_emtf_site)
+        self.hb_tflayer = ak.unflatten(tflayerLUT[ak.flatten(self.hit_emtf_site)], cnts)
+        testLUT = listLUT(TFLayer.values(), self.hit_emtf_site)
 
     def __bookSecCnt(self):
         self.h.update({
@@ -94,9 +99,17 @@ class EMTFHits(Module):
             for j in range(0, len(sysnum)):
                 self.h["seccnt_type%d_sta%d" %( j , i) ]= Hist.new.Reg(20, 0, 20, 
                                                                   name="NO. of %s hits / Station %i" % (sysnum[j], i)).Double()
-        # for i in EMTFSiteMap.keys():
-            # self.h["phidist_%s" % EMTFSiteMap[i]] = Hist.new.Reg(60, -30, 30,
-                                                                 # name="phi vs offline phi").Double()
+        for i in EMTFSiteMap.keys():
+            self.h["phidist_%s" % EMTFSiteMap[i]] = Hist.new.Reg(60, -30, 30,
+                                                                 name="phi vs offline phi").Double()
+        self.h["station_map"] = (
+            Hist.new
+            .Reg(250, 500, 1000, name="x", label ="Z")
+            .Reg(180, 0, 180, name="y", label="theta")
+            .Reg(10, 0, 10, name="z", label="TFLayer")
+            .Double()
+        )
+
             
     def __bookExtraHits(self):
         self.h.update({
@@ -105,10 +118,16 @@ class EMTFHits(Module):
         })
 
     def run(self, event):
-        self.__GetEvent__(event)
+        super().run(event)
         self.plotSecCnt()
         self.FindExtraHits()
-        # self.StudyResolution()
+        self.StudyResolution()
+        self.plotTFLayer()
+
+    def plotTFLayer(self):
+        self.h["station_map"].fill(x=ak.flatten(abs(self.hit_glob_z)),
+                                   y=ak.flatten(self.hit_glob_theta), 
+                                   z=ak.flatten(self.hb_tflayer))
 
     def plotSecCnt(self):
         ### Plot per sector
@@ -139,7 +158,6 @@ class EMTFHits(Module):
     def StudyResolution(self):
         secedge = (15 + self.hit_endcap * 60)
         secedge = ak.where(secedge > 180, secedge-360, secedge)
-        # print(self.hit_glob_phi[0], secedge[0],  (self.hit_glob_phi - secedge)[0] )
         phidiff = self.hit_emtf_phi * phiLSB - self.hit_glob_phi
         print(self.hit_emtf_phi[0], self.hit_glob_phi[0],
               (self.hit_endcap*self.hit_sector)[0], (self.hit_emtf_phi * phiLSB)[0] )
@@ -152,4 +170,6 @@ class EMTFHits(Module):
         # print(self.hit_subsystem[sel])
 
     def endrun(self, outfile, nTotal=0):
+        for i in range(5):
+            self.h["station_map%d" % i]  = self.h["station_map"][:, :, hist.loc(i)]
         super().endrun(outfile, nTotal)
