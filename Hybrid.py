@@ -76,19 +76,10 @@ class HybridStub(Module):
         })
 
     def __GetEvent__(self, event):
+        super().__GetEvent__(event)
         for k in dir(event):
             if k.startswith("hit_"):
                 setattr(self, k, event[k])
-
-        ## Setting the hybrid stub stations
-        isME11 = ((self.hit_emtf_chamber >= 0) & (self.hit_emtf_chamber <= 2)) | \
-                ((self.hit_emtf_chamber >= 9) & (self.hit_emtf_chamber <= 11)) 
-        isME0 = ((self.hit_emtf_chamber >= 108) & (self.hit_emtf_chamber <= 114))
-        isGE11 = ((self.hit_emtf_chamber >= 54) & (self.hit_emtf_chamber <= 56)) | \
-                ((self.hit_emtf_chamber >= 63) & (self.hit_emtf_chamber <= 11)) 
-        istation1 = isME0 | isME11 | isGE11
-        self.hb_station = self.hit_station+1
-        self.hb_station = ak.where(istation1, 1, self.hb_station)
 
         self.stubs = ak.zip({
             "phi" : self.hit_emtf_phi,

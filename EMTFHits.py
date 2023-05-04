@@ -68,23 +68,10 @@ class EMTFHits(Module):
         self.__bookSecCnt()
 
     def __GetEvent__(self, event):
+        super().__GetEvent__(event)
         for k in dir(event):
             if k.startswith("hit_"):
                 setattr(self, k, event[k])
-
-        ## Setting the hybrid stub stations
-        isME11 = ((self.hit_emtf_chamber >= 0) & (self.hit_emtf_chamber <= 2)) | \
-                ((self.hit_emtf_chamber >= 9) & (self.hit_emtf_chamber <= 11)) 
-        isME0 = ((self.hit_emtf_chamber >= 108) & (self.hit_emtf_chamber <= 114))
-        isGE11 = ((self.hit_emtf_chamber >= 54) & (self.hit_emtf_chamber <= 56)) | \
-                ((self.hit_emtf_chamber >= 63) & (self.hit_emtf_chamber <= 11)) 
-        istation1 = isME0 | isME11 | isGE11
-        self.hb_station = self.hit_station+1
-        self.hb_station = ak.where(istation1, 1, self.hb_station)
-        tflayerLUT = ak.from_iter(TFLayer.values())
-        cnts= ak.num(self.hit_emtf_site)
-        self.hb_tflayer = ak.unflatten(tflayerLUT[ak.flatten(self.hit_emtf_site)], cnts)
-        testLUT = listLUT(TFLayer.values(), self.hit_emtf_site)
 
     def __bookSecCnt(self):
         self.h.update({

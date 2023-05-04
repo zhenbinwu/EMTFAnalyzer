@@ -63,7 +63,22 @@ class Module():
 
 
     def __GetEvent__(self, event):
-        pass
+        self.__SethbStation(event)
+
+    def __SethbStation(self, event):
+        ## Setting the hybrid stub stations
+        isME11 = ((self.hit_emtf_chamber >= 0) & (self.hit_emtf_chamber <= 2)) | \
+                ((self.hit_emtf_chamber >= 9) & (self.hit_emtf_chamber <= 11)) 
+        isME0 = ((self.hit_emtf_chamber >= 108) & (self.hit_emtf_chamber <= 114))
+        isGE11 = ((self.hit_emtf_chamber >= 54) & (self.hit_emtf_chamber <= 56)) | \
+                ((self.hit_emtf_chamber >= 63) & (self.hit_emtf_chamber <= 11)) 
+        ## From the hybrid stub plot, only ME0/GE11 is station 1
+        istation1 = isME0 | isGE11
+        self.hb_station = self.hit_station+1
+        self.hb_station = ak.where(istation1, 1, self.hb_station)
+
+        ## Get the TFLayer, used in the GMT emulator
+        self.hb_tflayer = listLUT(TFLayer.values(), self.hit_emtf_site)
 
     def run(self, event):
         self.h["Nevent"].fill(event.evt_run > 0)
