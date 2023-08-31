@@ -80,6 +80,15 @@ class Module():
         ## Get the TFLayer, used in the GMT emulator
         self.hb_tflayer = listLUT(TFLayer.values(), event.hit_emtf_site)
 
+        ## Set the Hybrid Stub Layers according to the plot
+        self.hb_layer = self.hb_station
+        ## For ME11, eta < 2.0 will be station 1
+        ME11_Stat1 = isME11 & ((abs(event.hit_glob_theta) < 15.4) | (abs(event.hit_glob_theta) > 180-15.4))
+        self.hb_layer = ak.where(ME11_Stat1, 1, self.hb_layer)
+        ## For GE11, eta > 2.0 will be station 2
+        GE11_Stat2 = isGE11 & ((abs(event.hit_glob_theta) > 15.4)  & (abs(event.hit_glob_theta) < 180- 15.4))
+        self.hb_layer = ak.where(GE11_Stat2, 2, self.hb_layer)
+
     def run(self, event):
         self.h["Nevent"].fill(event.evt_run > 0)
         self.__GetEvent__(event)
@@ -99,3 +108,12 @@ def ConvertRate(hist, nZB=0):
     newcontent = np.flip(np.cumsum(np.flip(content))) * LHCnBunches * LHCFreq / nZB
     hist[...] = newcontent
     return hist
+
+def GetUnique(array):
+    length = ak.run_lengths(array)
+    flat = ak.flatten(array)
+    # samearray = ak.unflatten(array, length)
+    samearray = ak.unflatten(flat, ak.flatten(length))
+    unique = ak.firsts(samearray)
+    cnts = ak.num(length)
+    return ak.unflatten(unique, cnts)

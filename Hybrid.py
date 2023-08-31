@@ -85,10 +85,10 @@ class HybridStub(Module):
             "phi" : self.hit_emtf_phi,
             "chamber" : self.hit_emtf_chamber,
             "sector" : self.hit_sector,
-            "station" : self.hb_station,
+            "station" : self.hb_layer,
             "theta1" : self.hit_emtf_theta1,
             "theta2" : self.hit_emtf_theta2,
-            "secsta" : self.hit_endcap * (self.hit_sector * 10 + self.hb_station),
+            "secsta" : self.hit_endcap * (self.hit_sector * 10 + self.hb_layer),
         })
 
     def make_equiv_classes(self, pairs):

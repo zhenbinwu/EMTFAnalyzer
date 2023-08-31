@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # encoding: utf-8
 
 # File        : run.py
@@ -8,7 +8,7 @@
 #
 # Description : 
 
-
+import os
 import uproot
 import argparse
 import numpy as np
@@ -38,9 +38,13 @@ samplemap = {
 }
 
 def eosls(sample):
+    hostname =os.uname().nodename
     if sample not in samplemap.keys():
         return None
-    outputLocation = eosfolder + samplemap[sample]
+    if "local" in hostname:
+        outputLocation = "/Users/benwu/Work/Data/Fall22_GMT_v2/" + sample
+    else:
+        outputLocation = eosfolder + samplemap[sample]
     if "eos" in outputLocation:
         p = subprocess.Popen("eos root://cmseos.fnal.gov find %s -type f -name \'*.root\' " % outputLocation,
                                       stdout=subprocess.PIPE, shell=True)
@@ -48,7 +52,7 @@ def eosls(sample):
         dummyFiles = str(dummyFiles_, 'UTF-8').split("\n")
         dummyFiles = [ f for f in dummyFiles if f.endswith(".root") ]
     else:
-        dummyFiles = os.listdir(outputLocation)
+        dummyFiles = [ outputLocation +"/"+i for i in os.listdir(outputLocation)]
     return dummyFiles
 
 if __name__ == "__main__":
@@ -59,7 +63,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.sample == "test":
-        filelist = ["./sample_TT2L.root"]
+        filelist = ["./GMT_sample.root"]
     else:
         filelist = eosls(args.sample)
     filename = [i+":emtfToolsNtupleMaker/tree" for i in filelist]
